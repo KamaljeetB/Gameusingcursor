@@ -1,0 +1,21 @@
+run = "python3 main.py"
+entrypoint = "main.py"
+
+[nix]
+channel = "stable-22.11"
+
+[env]
+PYTHONPATH = "${PYTHONPATH}:${REPL_HOME}"
+
+[packager]
+language = "python3"
+
+[packager.features]
+packageSearch = true
+guessImports = true
+
+[languages]
+[languages.python3]
+pattern = "**/*.py"
+syntax = "python"
+start = ["python3", "main.py"]

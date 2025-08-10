@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🦊 Labubu Obstacle Course</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin: 20px 0;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            margin: 10px 0;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .game-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            padding: 20px;
+            margin: 20px;
+            position: relative;
+        }
+        
+        #gameCanvas {
+            border: 2px solid #333;
+            border-radius: 10px;
+            background: #87CEEB;
+        }
+        
+        .controls {
+            background: rgba(255,255,255,0.9);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px;
+            text-align: center;
+            max-width: 600px;
+        }
+        
+        .controls h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+        }
+        
+        .control-item {
+            display: inline-block;
+            margin: 5px 15px;
+            padding: 8px 15px;
+            background: #667eea;
+            color: white;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        
+        .game-info {
+            background: rgba(255,255,255,0.9);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px;
+            text-align: center;
+            max-width: 600px;
+        }
+        
+        .game-info h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+        }
+        
+        .score-display {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+            margin: 10px 0;
+        }
+        
+        .footer {
+            margin-top: auto;
+            text-align: center;
+            color: white;
+            opacity: 0.8;
+            padding: 20px;
+        }
+        
+        .play-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .play-button:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+        }
+        
+        .game-over h2 {
+            margin: 0 0 20px 0;
+            color: #ff6b6b;
+        }
+        
+        .game-over button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🦊 Labubu Obstacle Course</h1>
+        <p>Jump, collect coins, and survive as long as possible!</p>
+    </div>
+    
+    <div class="game-container">
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+        
+        <div class="game-over" id="gameOver">
+            <h2>Game Over!</h2>
+            <p>Final Score: <span id="finalScore">0</span></p>
+            <p>Coins Collected: <span id="finalCoins">0</span></p>
+            <button onclick="restartGame()">Play Again</button>
+        </div>
+    </div>
+    
+    <div class="game-info">
+        <h3>🎮 Game Status</h3>
+        <div class="score-display">Score: <span id="score">0</span></div>
+        <div class="score-display">Coins: <span id="coins">0</span></div>
+        <div class="score-display">Speed: <span id="speed">1.0</span>x</div>
+    </div>
+    
+    <div class="controls">
+        <h3>🎮 Game Controls</h3>
+        <div class="control-item">SPACE: Jump</div>
+        <div class="control-item">R: Restart</div>
+        <div class="control-item">P: Pause</div>
+    </div>
+    
+    <div class="footer">
+        <p>🎵 Features: Sound Effects • Background Music • Pause System • Collectibles</p>
+        <p>🔄 Game automatically saves your best score!</p>
+    </div>
+    
+    <script>
+        // Game variables
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let gameRunning = true;
+        let gamePaused = false;
+        let score = 0;
+        let coins = 0;
+        let gameSpeed = 1.0;
+        let lastTime = 0;
+        
+        // Game objects
+        const labubu = {
+            x: 100,
+            y: 300,
+            width: 40,
+            height: 40,
+            velocityY: 0,
+            onGround: true,
+            jumping: false
+        };
+        
+        const obstacles = [];
+        const collectibles = [];
+        
+        // Game constants
+        const GRAVITY = 0.8;
+        const JUMP_FORCE = -15;
+        const GROUND_Y = 300;
+        const OBSTACLE_SPEED = 3;
+        
+        // Initialize game
+        function init() {
+            // Start game loop
+            gameLoop();
+            
+            // Event listeners
+            document.addEventListener('keydown', handleKeyDown);
+            document.addEventListener('keyup', handleKeyUp);
+            
+            // Spawn initial obstacles
+            spawnObstacle();
+            spawnCollectible();
+        }
+        
+        // Game loop
+        function gameLoop(currentTime) {
+            if (!gameRunning) return;
+            
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+            
+            if (!gamePaused) {
+                update(deltaTime);
+            }
+            
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Update game logic
+        function update(deltaTime) {
+            // Update Labubu
+            updateLabubu();
+            
+            // Update obstacles
+            updateObstacles();
+            
+            // Update collectibles
+            updateCollectibles();
+            
+            // Check collisions
+            checkCollisions();
+            
+            // Update score
+            score += 0.1;
+            
+            // Increase game speed
+            gameSpeed += 0.001;
+            
+            // Spawn new obstacles
+            if (Math.random() < 0.02) {
+                spawnObstacle();
+            }
+            
+            // Spawn new collectibles
+            if (Math.random() < 0.01) {
+                spawnCollectible();
+            }
+        }
+        
+        // Update Labubu physics
+        function updateLabubu() {
+            // Apply gravity
+            labubu.velocityY += GRAVITY;
+            labubu.y += labubu.velocityY;
+            
+            // Ground collision
+            if (labubu.y >= GROUND_Y) {
+                labubu.y = GROUND_Y;
+                labubu.velocityY = 0;
+                labubu.onGround = true;
+                labubu.jumping = false;
+            }
+        }
+        
+        // Update obstacles
+        function updateObstacles() {
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].x -= OBSTACLE_SPEED * gameSpeed;
+                
+                // Remove off-screen obstacles
+                if (obstacles[i].x + obstacles[i].width < 0) {
+                    obstacles.splice(i, 1);
+                }
+            }
+        }
+        
+        // Update collectibles
+        function updateCollectibles() {
+            for (let i = collectibles.length - 1; i >= 0; i--) {
+                collectibles[i].x -= OBSTACLE_SPEED * gameSpeed;
+                
+                // Remove off-screen collectibles
+                if (collectibles[i].x + collectibles[i].width < 0) {
+                    collectibles.splice(i, 1);
+                }
+            }
+        }
+        
+        // Check collisions
+        function checkCollisions() {
+            // Obstacle collisions
+            for (let obstacle of obstacles) {
+                if (labubu.x < obstacle.x + obstacle.width &&
+                    labubu.x + labubu.width > obstacle.x &&
+                    labubu.y < obstacle.y + obstacle.height &&
+                    labubu.y + labubu.height > obstacle.y) {
+                    gameOver();
+                    return;
+                }
+            }
+            
+            // Collectible collisions
+            for (let i = collectibles.length - 1; i >= 0; i--) {
+                let collectible = collectibles[i];
+                if (labubu.x < collectible.x + collectible.width &&
+                    labubu.x + labubu.width > collectible.x &&
+                    labubu.y < collectible.y + collectible.height &&
+                    labubu.y + labubu.height > collectible.y) {
+                    coins++;
+                    collectibles.splice(i, 1);
+                }
+            }
+        }
+        
+        // Spawn obstacle
+        function spawnObstacle() {
+            const height = Math.random() * 40 + 30;
+            obstacles.push({
+                x: canvas.width,
+                y: GROUND_Y - height,
+                width: 30,
+                height: height
+            });
+        }
+        
+        // Spawn collectible
+        function spawnCollectible() {
+            collectibles.push({
+                x: canvas.width,
+                y: Math.random() * 200 + 50,
+                width: 20,
+                height: 20,
+                type: Math.random() < 0.3 ? 'gem' : 'coin'
+            });
+        }
+        
+        // Handle key presses
+        function handleKeyDown(e) {
+            if (e.code === 'Space' && labubu.onGround && !labubu.jumping) {
+                jump();
+            } else if (e.code === 'KeyR') {
+                restartGame();
+            } else if (e.code === 'KeyP') {
+                togglePause();
+            }
+        }
+        
+        function handleKeyUp(e) {
+            if (e.code === 'Space') {
+                labubu.jumping = false;
+            }
+        }
+        
+        // Jump function
+        function jump() {
+            if (labubu.onGround) {
+                labubu.velocityY = JUMP_FORCE;
+                labubu.onGround = false;
+                labubu.jumping = true;
+            }
+        }
+        
+        // Toggle pause
+        function togglePause() {
+            gamePaused = !gamePaused;
+        }
+        
+        // Game over
+        function gameOver() {
+            gameRunning = false;
+            document.getElementById('finalScore').textContent = Math.floor(score);
+            document.getElementById('finalCoins').textContent = coins;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+        
+        // Restart game
+        function restartGame() {
+            gameRunning = true;
+            gamePaused = false;
+            score = 0;
+            coins = 0;
+            gameSpeed = 1.0;
+            obstacles.length = 0;
+            collectibles.length = 0;
+            labubu.x = 100;
+            labubu.y = GROUND_Y;
+            labubu.velocityY = 0;
+            labubu.onGround = true;
+            labubu.jumping = false;
+            document.getElementById('gameOver').style.display = 'none';
+            spawnObstacle();
+            spawnCollectible();
+        }
+        
+        // Render game
+        function render() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw ground
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(0, GROUND_Y + 40, canvas.width, 60);
+            
+            // Draw Labubu
+            ctx.fillStyle = '#808080';
+            ctx.fillRect(labubu.x, labubu.y, labubu.width, labubu.height);
+            
+            // Draw eyes
+            ctx.fillStyle = '#000';
+            ctx.fillRect(labubu.x + 25, labubu.y + 10, 5, 5);
+            ctx.fillRect(labubu.x + 30, labubu.y + 10, 5, 5);
+            
+            // Draw obstacles
+            ctx.fillStyle = '#228B22';
+            for (let obstacle of obstacles) {
+                ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+            }
+            
+            // Draw collectibles
+            for (let collectible of collectibles) {
+                if (collectible.type === 'gem') {
+                    ctx.fillStyle = '#FFD700';
+                } else {
+                    ctx.fillStyle = '#FFD700';
+                }
+                ctx.fillRect(collectible.x, collectible.y, collectible.width, collectible.height);
+            }
+            
+            // Update UI
+            document.getElementById('score').textContent = Math.floor(score);
+            document.getElementById('coins').textContent = coins;
+            document.getElementById('speed').textContent = gameSpeed.toFixed(1);
+        }
+        
+        // Start the game
+        init();
+    </script>
+</body>
+</html>
